@@ -1,6 +1,6 @@
 import { auth, db, storage } from './firebase.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // DOM Elements
@@ -16,14 +16,27 @@ const logoutBtn = document.getElementById('logout-btn');
 const tabs = document.querySelectorAll('.nav-item[data-tab]');
 const tabContents = document.querySelectorAll('.tab-content');
 
+// Exam Creation Elements
+const examTitleInput = document.getElementById('exam-title');
+const questionSelectList = document.getElementById('question-select-list');
+const refreshQuestionsBtn = document.getElementById('refresh-questions-btn');
+const createExamBtn = document.getElementById('create-exam-btn');
+const selectedCountSpan = document.getElementById('selected-count');
+const examListContainer = document.getElementById('exam-list');
+
 // State
 let questionsImages = []; // Array of File objects
 let currentOptionCount = 5;
+let loadedQuestions = []; // For exam creation
+let selectedQuestionIds = new Set();
 
 // Auth Check
 onAuthStateChanged(auth, (user) => {
     if (!user) {
         window.location.href = import.meta.env.BASE_URL + 'login.html';
+    } else {
+        // Load initial data if needed
+        loadCreatedExams();
     }
 });
 
@@ -41,6 +54,12 @@ tabs.forEach(tab => {
 
         tab.classList.add('active');
         document.getElementById(tab.dataset.tab).classList.add('active');
+
+        // If switching to create-exam, load questions
+        if (tab.dataset.tab === 'create-exam') {
+            loadQuestionsForExamCreation();
+            loadCreatedExams();
+        }
     });
 });
 
@@ -89,13 +108,12 @@ function handleImageFile(file) {
       <div class="remove-img-btn" data-index="${questionsImages.length}">×</div>
     `;
 
-        // Add remove handler
         imgDiv.querySelector('.remove-img-btn').addEventListener('click', (ev) => {
-            const idx = parseInt(ev.target.dataset.index);
-            // Remove from DOM
             imgDiv.remove();
-            // Note: Actual removal from array is complex with simple index, best to reconstruct or filter.
-            // For simplicity in this demo, we just hide UI. Real app needs ID mapping.
+            // Note: In a real app, we need to handle index management carefully.
+            // Here we just remove from UI, actual file array might get out of sync 
+            // if we rely on index. Ideally use IDs.
+            // For MVP, we'll clear all if complex editing is needed, or just append.
         });
 
         imagePreviewContainer.appendChild(imgDiv);
@@ -104,7 +122,6 @@ function handleImageFile(file) {
     questionsImages.push(file);
 }
 
-// Paste Event
 window.addEventListener('paste', (e) => {
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
     for (let item of items) {
@@ -141,8 +158,6 @@ saveBtn.addEventListener('click', async () => {
         }
 
         // 2. Save to Firestore
-        // Assuming we have a 'questions' collection. 
-        // In a real app, strict hierarchy maybe: quizzes -> [questions]
         await addDoc(collection(db, "questions"), {
             text: text,
             images: imageUrls,
@@ -153,17 +168,159 @@ saveBtn.addEventListener('click', async () => {
         });
 
         alert('문항이 저장되었습니다.');
-        // Reset Form
         questionText.value = '';
         imagePreviewContainer.innerHTML = '';
         questionsImages = [];
         renderOptions();
 
+        // Reload questions if needed
+        loadQuestionsForExamCreation();
+
     } catch (error) {
         console.error("Error saving question: ", error);
-        alert('저장 중 오류가 발생했습니다.');
+        alert('저장 중 오류가 발생했습니다: ' + error.message);
     } finally {
         saveBtn.disabled = false;
-        saveBtn.textContent = '저장하기';
+        saveBtn.textContent = '문항 저장하기';
     }
 });
+
+
+// --- Exam Creation Logic ---
+
+refreshQuestionsBtn.addEventListener('click', loadQuestionsForExamCreation);
+
+async function loadQuestionsForExamCreation() {
+    if (!auth.currentUser) return;
+
+    questionSelectList.innerHTML = '<div style="text-align:center; padding:1rem;">로딩 중...</div>';
+
+    try {
+        const q = query(collection(db, "questions"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+
+        loadedQuestions = [];
+        snapshot.forEach(doc => {
+            loadedQuestions.push({ id: doc.id, ...doc.data() });
+        });
+
+        renderQuestionSelectList();
+
+    } catch (e) {
+        console.error("Error loading questions", e);
+        questionSelectList.innerHTML = '<div style="text-align:center; color:red;">문항 로드 실패</div>';
+    }
+}
+
+function renderQuestionSelectList() {
+    questionSelectList.innerHTML = '';
+    selectedQuestionIds.clear();
+    updateSelectedCount(); // reset to 0
+
+    if (loadedQuestions.length === 0) {
+        questionSelectList.innerHTML = '<div style="text-align:center; padding:1rem;">등록된 문항이 없습니다.</div>';
+        return;
+    }
+
+    loadedQuestions.forEach(q => {
+        const item = document.createElement('div');
+        item.className = 'question-select-item';
+
+        const hasImg = q.images && q.images.length > 0 ? '(이미지 포함)' : '';
+        const shortText = q.text ? (q.text.length > 50 ? q.text.substring(0, 50) + '...' : q.text) : '(이미지 문항)';
+
+        item.innerHTML = `
+          <input type="checkbox" class="question-checkbox" value="${q.id}">
+          <div style="flex:1;">
+             <div class="q-preview-text">${shortText} <span style="font-size:0.8em; color:blue;">${hasImg}</span></div>
+             <div class="q-preview-meta">작성일: ${q.createdAt ? new Date(q.createdAt.seconds * 1000).toLocaleDateString() : '-'}</div>
+          </div>
+        `;
+
+        const checkbox = item.querySelector('input');
+        checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) selectedQuestionIds.add(q.id);
+            else selectedQuestionIds.delete(q.id);
+            updateSelectedCount();
+        });
+
+        questionSelectList.appendChild(item);
+    });
+}
+
+function updateSelectedCount() {
+    selectedCountSpan.textContent = `${selectedQuestionIds.size}개 선택됨`;
+}
+
+createExamBtn.addEventListener('click', async () => {
+    const title = examTitleInput.value.trim();
+    if (!title) {
+        alert("시험지 제목을 입력해주세요.");
+        return;
+    }
+    if (selectedQuestionIds.size === 0) {
+        alert("최소 1개 이상의 문항을 선택해주세요.");
+        return;
+    }
+
+    if (!confirm(`${selectedQuestionIds.size}개의 문항으로 시험지를 생성하시겠습니까?`)) return;
+
+    createExamBtn.disabled = true;
+    createExamBtn.textContent = '생성 중...';
+
+    try {
+        await addDoc(collection(db, "exams"), {
+            title: title,
+            questionIds: Array.from(selectedQuestionIds),
+            teacherId: auth.currentUser.uid,
+            createdAt: serverTimestamp(),
+            isActive: true
+        });
+
+        alert("시험지가 생성되었습니다!");
+        examTitleInput.value = '';
+        renderQuestionSelectList(); // Reset selection
+        loadCreatedExams(); // Reload list
+
+    } catch (e) {
+        console.error("Error creating exam", e);
+        alert("시험지 생성 실패: " + e.message);
+    } finally {
+        createExamBtn.disabled = false;
+        createExamBtn.textContent = '시험지 생성하기';
+    }
+});
+
+async function loadCreatedExams() {
+    if (!auth.currentUser) return;
+
+    examListContainer.innerHTML = '로딩 중...';
+    try {
+        const q = query(collection(db, "exams"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+
+        examListContainer.innerHTML = '';
+        if (snapshot.empty) {
+            examListContainer.innerHTML = '<div style="padding:1rem;">생성된 시험지가 없습니다.</div>';
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const div = document.createElement('div');
+            div.className = 'question-select-item';
+            div.innerHTML = `
+              <div style="flex:1;">
+                <div class="q-preview-text" style="font-size:1.1rem;">${data.title}</div>
+                <div class="q-preview-meta">문항 수: ${data.questionIds ? data.questionIds.length : 0}개 | 생성일: ${data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : '-'}</div>
+              </div>
+              <a href="index.html?mode=preview&examId=${doc.id}" target="_blank" class="btn btn-sm btn-outline">미리보기</a>
+            `;
+            examListContainer.appendChild(div);
+        });
+
+    } catch (e) {
+        console.error(e);
+        examListContainer.innerHTML = '목록 로드 오류';
+    }
+}
