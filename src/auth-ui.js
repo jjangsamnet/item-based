@@ -85,10 +85,11 @@ authForm.addEventListener('submit', async (e) => {
 });
 
 function redirectUser(role) {
+    const baseUrl = import.meta.env.BASE_URL;
     if (role === 'teacher' || role === 'admin') {
-        window.location.href = '/teacher.html';
+        window.location.href = baseUrl + 'teacher.html';
     } else {
-        window.location.href = '/index.html';
+        window.location.href = baseUrl + 'index.html';
     }
 }
 

@@ -23,14 +23,14 @@ let currentOptionCount = 5;
 // Auth Check
 onAuthStateChanged(auth, (user) => {
     if (!user) {
-        window.location.href = '/login.html';
+        window.location.href = import.meta.env.BASE_URL + 'login.html';
     }
 });
 
 // Logout
 logoutBtn.addEventListener('click', async () => {
     await signOut(auth);
-    window.location.href = '/login.html';
+    window.location.href = import.meta.env.BASE_URL + 'login.html';
 });
 
 // Tab Navigation

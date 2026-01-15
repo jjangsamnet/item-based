@@ -15,7 +15,7 @@ let loadedQuestions = [];
 // Auth Check
 onAuthStateChanged(auth, (user) => {
     if (!user) {
-        window.location.href = '/login.html';
+        window.location.href = import.meta.env.BASE_URL + 'login.html';
     } else {
         userEmailSpan.textContent = user.email;
         loadQuestions();
@@ -24,7 +24,7 @@ onAuthStateChanged(auth, (user) => {
 
 logoutBtn.addEventListener('click', async () => {
     await signOut(auth);
-    window.location.href = '/login.html';
+    window.location.href = import.meta.env.BASE_URL + 'login.html';
 });
 
 async function loadQuestions() {
