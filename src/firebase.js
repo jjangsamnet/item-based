@@ -1,24 +1,26 @@
-// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAnalytics } from "firebase/analytics";
 
-// TODO: Replace with your actual Firebase project configuration
-// You can get this from the Firebase Console -> Project Settings -> General -> Your apps
+// Config from User
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com", // Correct bucket format usually
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBa3bdefIKJuIqGHOqk608Zu4IcToo56Ss",
+  authDomain: "item-based.firebaseapp.com",
+  projectId: "item-based",
+  storageBucket: "item-based.firebasestorage.app",
+  messagingSenderId: "817296899475",
+  appId: "1:817296899475:web:1c2beaa2840f47420cfc66",
+  measurementId: "G-5T7TMCF0Y3"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const analytics = getAnalytics(app);
 const googleProvider = new GoogleAuthProvider();
 
-export { auth, db, storage, googleProvider };
+export { auth, db, storage, analytics, googleProvider };
