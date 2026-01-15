@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학생 시험 페이지</title>
+    <link rel="stylesheet" href="./src/style.css">
+    <style>
+        .quiz-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding-bottom: 4rem;
+        }
+
+        .question-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .question-image img {
+            max-width: 100%;
+            border-radius: var(--radius);
+            margin-top: 1rem;
+            max-height: 300px;
+            object-fit: contain;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            white-space: pre-wrap;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-label:hover {
+            background-color: var(--bg-color);
+        }
+
+        .option-label input {
+            margin-right: 1rem;
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        #score-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        #score-modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header style="background: white; border-bottom: 1px solid var(--border-color); padding: 1rem 0;">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+            <h1 style="font-size: 1.25rem;">📝 기말고사 대비 평가</h1>
+            <button id="logout-btn" class="btn btn-outline" style="font-size: 0.875rem;">로그아웃</button>
+        </div>
+    </header>
+
+    <main class="container quiz-container">
+        <div class="status-bar">
+            <span>총 <b id="total-count">0</b>문제</span>
+            <span class="text-muted" id="user-email"></span>
+        </div>
+
+        <div id="questions-list">
+            <!-- Questions inject here -->
+            <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+                문제를 불러오는 중입니다...
+            </div>
+        </div>
+
+        <button id="submit-quiz-btn" class="btn btn-primary"
+            style="width: 100%; padding: 1rem; font-size: 1.1rem; margin-top: 2rem;">
+            답안 제출하기
+        </button>
+    </main>
+
+    <!-- Score Modal -->
+    <div id="score-modal">
+        <div class="glass-card"
+            style="background: white; padding: 2.5rem; width: 90%; max-width: 400px; text-align: center;">
+            <h2 style="margin-bottom: 1rem;">시험 결과</h2>
+            <div style="font-size: 4rem; font-weight: 800; color: var(--primary-color); margin-bottom: 0.5rem;"
+                id="final-score">
+                --
+            </div>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">수고하셨습니다!</p>
+            <button class="btn btn-primary" onclick="window.location.reload()">다시 풀기</button>
+        </div>
+    </div>
+
+    <script type="module" src="./src/student.js"></script>
+</body>
+
+</html>

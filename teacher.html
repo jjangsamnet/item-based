@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>선생님 대시보드 - 문항출제 시스템</title>
+    <link rel="stylesheet" href="./src/style.css">
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+        }
+
+        .main-content {
+            padding: 2rem;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            border-radius: var(--radius);
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        /* Editor Styles */
+        .editor-container {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .question-input-area {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            min-height: 150px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .question-input-area:focus-within {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .question-textarea {
+            width: 100%;
+            border: none;
+            resize: vertical;
+            min-height: 100px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .image-preview-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .image-preview-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: var(--radius);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-img-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .options-list {
+            margin-top: 1.5rem;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .option-radio {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary-color);
+        }
+
+        /* Tab Controls */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-grid">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2 style="margin-bottom: 2rem; color: var(--primary-color);">Teacher Page</h2>
+            <nav>
+                <a class="nav-item active" data-tab="create-quiz">문항 출제</a>
+                <a class="nav-item" data-tab="manage-quiz">문항 관리</a>
+                <a class="nav-item" data-tab="analytics">성적 분석</a>
+                <div style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                    <button id="logout-btn" class="nav-item" style="width:100%; text-align:left;">로그아웃</button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- Tab: Create Quiz -->
+            <section id="create-quiz" class="tab-content active">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h1>새로운 문항 만들기</h1>
+                    <button id="save-question-btn" class="btn btn-primary">저장하기</button>
+                </div>
+
+                <div class="editor-container">
+                    <div class="input-group">
+                        <label class="input-label">질문 내용 (텍스트 입력 또는 이미지 붙여넣기)</label>
+                        <div class="question-input-area" id="drop-zone">
+                            <textarea id="question-text" class="question-textarea"
+                                placeholder="여기에 질문을 입력하거나 이미지를 붙여넣으세요 (Ctrl+V)"></textarea>
+                            <div id="image-preview-container" class="image-preview-area"></div>
+                        </div>
+                    </div>
+
+                    <div class="options-container">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <label class="input-label">보기 설정</label>
+                            <div>
+                                <button id="decrease-options" class="btn btn-outline"
+                                    style="padding: 0.25rem 0.5rem;">-</button>
+                                <span id="option-count" style="margin: 0 0.5rem; font-weight: 500;">5</span>
+                                <button id="increase-options" class="btn btn-outline"
+                                    style="padding: 0.25rem 0.5rem;">+</button>
+                            </div>
+                        </div>
+
+                        <div id="options-list" class="options-list">
+                            <!-- Options injected via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Manage Quiz -->
+            <section id="manage-quiz" class="tab-content">
+                <h1>출제된 문항 관리</h1>
+                <p class="text-muted">아직 구현 중...</p>
+            </section>
+
+            <!-- Tab: Analytics -->
+            <section id="analytics" class="tab-content">
+                <h1>학생 성적 분석</h1>
+                <div class="glass-card" style="padding: 2rem; margin-top: 2rem;">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    <script type="module" src="./src/teacher.js"></script>
+</body>
+
+</html>
